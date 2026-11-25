@@ -1,0 +1,113 @@
+:root {
+  color-scheme: dark;
+
+  /* Surface & Elevation Tokens */
+  --bg-canvas: #080c14;
+  --bg-surface: #0e1522;
+  --bg-surface-alt: #121b2c;
+  --bg-elevated: #172237;
+  --bg-hover: #1d2b45;
+  --bg-selected: rgba(56, 189, 248, 0.13);
+
+  /* Border & Focus Tokens */
+  --border-subtle: #1e2d47;
+  --border-strong: #2d4369;
+  --focus-ring: #38bdf8;
+
+  /* Typography Tokens */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Semantic Severity & Status Tokens */
+  --sev-critical-fg: #fda4af;
+  --sev-critical-bg: rgba(244, 63, 94, 0.16);
+  --sev-critical-border: rgba(244, 63, 94, 0.45);
+  --sev-critical-dot: #f43f5e;
+
+  --sev-high-fg: #fdba74;
+  --sev-high-bg: rgba(249, 115, 22, 0.16);
+  --sev-high-border: rgba(249, 115, 22, 0.45);
+  --sev-high-dot: #f97316;
+
+  --sev-medium-fg: #fde047;
+  --sev-medium-bg: rgba(234, 179, 8, 0.15);
+  --sev-medium-border: rgba(234, 179, 8, 0.42);
+  --sev-medium-dot: #eab308;
+
+  --sev-low-fg: #7dd3fc;
+  --sev-low-bg: rgba(14, 165, 233, 0.15);
+  --sev-low-border: rgba(14, 165, 233, 0.4);
+  --sev-low-dot: #38bdf8;
+
+  --status-open-fg: #fca5a5;
+  --status-open-bg: rgba(239, 68, 68, 0.14);
+  --status-investigating-fg: #93c5fd;
+  --status-investigating-bg: rgba(59, 130, 246, 0.16);
+  --status-resolved-fg: #86efac;
+  --status-resolved-bg: rgba(34, 197, 94, 0.15);
+
+  --accent-primary: #38bdf8;
+  --accent-success: #22c55e;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+/* Custom subtle scrollbars for virtual viewport & detail drawer */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
