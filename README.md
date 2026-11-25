@@ -1,6 +1,5 @@
 # Aegis Ops — Real-Time Operational & Incident Management Console
 
-> **Senior Frontend Engineering Portfolio Showcase**  
 > Built with **Angular 22** (Standalone Architecture, Signals, `ChangeDetectionStrategy.OnPush`, `@angular/cdk/scrolling`, `@angular/cdk/a11y`, and **RxJS 7.8**) under strict TypeScript (`strict: true`, `strictTemplates: true`, zero `any`).  
 > 📖 **Want a concrete, millisecond-by-millisecond runtime trace?** Read **[HOW_IT_WORKS.md](HOW_IT_WORKS.md)**.
 
@@ -35,7 +34,7 @@ Standard CRUD dashboards rarely stress-test browser rendering pipelines or front
 
 1. **High-Velocity Ingestion Without Main-Thread Starvation:** Pushing 1,000 WebSocket events/sec directly into reactive UI state triggers 1,000 array/map clones, filter/sort passes over 10,000+ records, and layout recalculations per second—freezing user input.
 2. **Distributed Stream Anomalies:** At-least-once broker delivery produces **duplicate `eventId` frames** and **delayed out-of-order `sequence` frames** that can corrupt UI state if applied naively.
-3. **Race Conditions Between Optimistic UI & Live Streams:** When an operator clicks *Acknowledge* or *Resolve*, the UI must react in `<1ms`. If live stream metrics arrive while the HTTP write is in flight—and that HTTP write fails 600ms later—a naive snapshot rollback will accidentally erase the newer live stream data.
+3. **Race Conditions Between Optimistic UI & Live Streams:** When an operator clicks _Acknowledge_ or _Resolve_, the UI must react in `<1ms`. If live stream metrics arrive while the HTTP write is in flight—and that HTTP write fails 600ms later—a naive snapshot rollback will accidentally erase the newer live stream data.
 4. **Accessible, Direction-Agnostic High-Density UI:** Rendering 10,000+ interactive rows requires DOM virtualization, full keyboard navigation (`J`/`K`, arrows, `Enter`, `Esc`), modal focus trapping, screen-reader live regions, and **CSS Logical Properties** so LTR and RTL locales work identically without layout hacks.
 
 ---
@@ -84,6 +83,7 @@ flowchart LR
 ## 3. Deep Dive: Core Engineering Subsystems
 
 ### 3.1 Telemetry Stream Simulator & `bufferTime(100)` Backpressure
+
 - **File:** `src/app/core/services/incident-stream-simulator.service.ts`
 - **Initial Scale:** On startup, `generateSeedIncidents(10_000)` constructs 10,000 realistic operational incidents across 10 microservices (`payments-gateway`, `auth-edge-proxy`, `kafka-ingest-eu`, `ledger-settlement`, etc.) and 6 cloud regions (`us-east-1`, `eu-central-1`, `me-central-1`, etc.) so virtual scroll performance is testable immediately.
 - **Fractional-Carry Scheduler:** A `20ms` timer tick (`50 ticks/sec`) uses fractional carry accumulation to emit exact event rates across four presets:
@@ -103,6 +103,7 @@ flowchart LR
   Even during a **1,000 events/sec** burst, Angular's Signal graph receives **at most 10 batch commits per second** (~100 events per batch), preserving ~16.6ms frame budgets for 60 FPS scrolling and interaction.
 
 ### 3.2 Bounded `O(1)` Event Deduplication (`BoundedEventIdSet`)
+
 - **File:** `src/app/core/store/incident-reconciler.ts`
 - Keeping an unbounded `Set<string>` of seen `eventId`s at 1,000 events/sec leaks ~3.6 million strings per hour.
 - `BoundedEventIdSet` leverages JavaScript `Set` insertion-order iteration to maintain a **50,000-entry sliding FIFO window**:
@@ -111,6 +112,7 @@ flowchart LR
   - Duplicate packets increment the live `duplicatesDropped` telemetry counter without mutating incident state.
 
 ### 3.3 Causal Out-of-Order Sequence Reconciliation
+
 - **File:** `src/app/core/store/incident-reconciler.ts`
 - Every `Incident` tracks a monotonically increasing `lastSequence` integer, and every wire `TelemetryEvent` carries an `incidentId` and causal `sequence`.
 - **Forward Event (`event.sequence > incident.lastSequence`):** Updates `severity`, `status`, `assignee`, `metrics`, `updatedAt`, and advances `lastSequence = event.sequence`.
@@ -120,6 +122,7 @@ flowchart LR
   - Preserves full observability by inserting an audit entry (`kind: 'reconciled-out-of-order'`) into `incident.timeline` sorted causally by `(sequence, timestamp)` and incrementing `outOfOrderReconciled`.
 
 ### 3.4 Optimistic Mutations & Concurrent-Telemetry-Safe Rollback
+
 - **Files:** `src/app/core/store/telemetry-store.service.ts`, `src/app/core/services/incident-api-simulator.service.ts`
 - Operators can **Acknowledge**, **Assign**, or **Resolve** incidents from either the row quick-actions or the Detail Drawer.
 - `IncidentApiSimulatorService` simulates realistic network latency (**300–800ms**) and an organic **~15% upstream write failure rate** (plus a deterministic **Force Next Rollback** button in the Chaos Toolbar).
@@ -145,12 +148,14 @@ sequenceDiagram
 ```
 
 ### 3.5 Connection Resilience & Jittered Exponential Backoff
+
 - **File:** `src/app/core/services/connection-resilience.service.ts`
 - Simulates WebSocket transport drops and automatic reconnection using bounded exponential backoff with ±12% jitter to prevent thundering-herd reconnect storms:
   $$\text{delay} = \min\left(\text{maxDelay}, \text{baseDelay} \cdot 2^{\text{attempt}-1}\right) \pm 12\%\text{ jitter}$$
 - Drives a live `100ms` countdown Signal (`nextRetryInMs`, `attempt`, `currentBackoffDelayMs`) displayed in an assertive `role="alert"` status banner (`Attempt #1 (1.0s) → Attempt #2 (2.0s) → Attempt #3 (4.0s) → Connected`), with a manual **Force Reconnect** override.
 
 ### 3.6 10,000+ Row Virtualized Queue & Multi-Facet Computed Signals
+
 - **Files:** `src/app/features/incident-console/components/incident-virtual-table/incident-virtual-table.component.ts`, `src/app/core/store/telemetry-store.service.ts`
 - Uses `@angular/cdk/scrolling` (`<cdk-virtual-scroll-viewport itemSize="52">`) so only ~15–25 DOM rows exist at any moment regardless of whether 10,000 or 25,000 incidents are in memory.
 - Multi-facet filtering combines:
@@ -160,6 +165,7 @@ sequenceDiagram
   - **Deterministic Multi-Column Sorting:** Sortable by `Updated`, `Severity` (weighted rank + recency tie-breaker), `ID / Created`, and `P99 Latency`.
 
 ### 3.7 Bidirectional Layout (`dir="ltr" | "rtl"`) & WAI-ARIA Accessibility
+
 - **Zero Physical Directional CSS:** Every component uses **CSS Logical Properties** (`padding-inline`, `padding-block`, `margin-inline-start`, `inset-inline-end`, `border-inline-start`, `inline-size`, `block-size`, `text-align: start`).
 - Toggling `dir="ltr"` ↔ `dir="rtl"` in the header dynamically updates `<html dir="...">` via `DirectionService`:
   - KPI card accent borders flip cleanly from left to right via `border-inline-start`.
@@ -177,10 +183,10 @@ Once the app is running at `http://localhost:4200`:
 
 1. **Stress-Test 1,000 Events/Sec Backpressure:**
    - In the **Chaos Toolbar**, switch **Stream Rate** from `Normal (5/s)` → `Burst (1000/s)`.
-   - Watch the **KPI Header**: *Ingest Rate* climbs to `~1,000 evt/s`, while *Render Batches* stays locked at `10 batch/s (~100 evt/batch)` and *UI Frame Rate* remains at `60 FPS` while scrolling 10,000+ virtualized rows.
+   - Watch the **KPI Header**: _Ingest Rate_ climbs to `~1,000 evt/s`, while _Render Batches_ stays locked at `10 batch/s (~100 evt/batch)` and _UI Frame Rate_ remains at `60 FPS` while scrolling 10,000+ virtualized rows.
 2. **Verify Deduplication & Out-of-Order Reconciliation:**
    - Click **⇄ Inject Out-of-Order / Duplicate Burst** (or toggle **Continuous Chaos: ON**).
-   - Observe `Dedup` and `OOO` counters increment immediately in the *Stream Integrity* KPI card.
+   - Observe `Dedup` and `OOO` counters increment immediately in the _Stream Integrity_ KPI card.
    - Open an affected incident's drawer to see amber-highlighted `[Out-of-order seq #...]` entries reconciled in causal order without regressing newer incident status.
 3. **Test Exponential Backoff Disconnect / Reconnect:**
    - Click **⚡ Simulate Disconnect**.
@@ -197,14 +203,14 @@ Once the app is running at `http://localhost:4200`:
 
 ## 5. Keyboard Shortcuts & Triage Controls
 
-| Shortcut | Action |
-| :--- | :--- |
-| `J` or `ArrowDown` | Select next incident in the filtered virtual queue (auto-scrolls viewport) |
-| `K` or `ArrowUp` | Select previous incident in the filtered virtual queue (auto-scrolls viewport) |
-| `Enter` | Open the Incident Detail Drawer for the currently selected row |
-| `Escape` | Close the Incident Detail Drawer (restores focus) or blur active search input |
-| `/` | Focus the debounced keyword search bar |
-| `Tab` / `Shift + Tab` | Navigate interactive controls (trapped inside Detail Drawer when open) |
+| Shortcut              | Action                                                                         |
+| :-------------------- | :----------------------------------------------------------------------------- |
+| `J` or `ArrowDown`    | Select next incident in the filtered virtual queue (auto-scrolls viewport)     |
+| `K` or `ArrowUp`      | Select previous incident in the filtered virtual queue (auto-scrolls viewport) |
+| `Enter`               | Open the Incident Detail Drawer for the currently selected row                 |
+| `Escape`              | Close the Incident Detail Drawer (restores focus) or blur active search input  |
+| `/`                   | Focus the debounced keyword search bar                                         |
+| `Tab` / `Shift + Tab` | Navigate interactive controls (trapped inside Detail Drawer when open)         |
 
 ---
 
@@ -298,21 +304,26 @@ Full engineering context, alternatives considered, and trade-offs are documented
 ## 9. Getting Started & CLI Commands
 
 ### Prerequisites
+
 - **Node.js** `>= 20.x`
 - **npm** `>= 10.x`
 
 ### Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### Start Development Server
+
 ```bash
 npm start
 ```
+
 Navigate to `http://localhost:4200` — hot reload is enabled.
 
 ### Run Unit Tests
+
 ```bash
 # Single CI run (Vitest)
 npm run test:ci
@@ -322,7 +333,9 @@ npm test
 ```
 
 ### Build Production Bundle
+
 ```bash
 npm run build
 ```
+
 Build artifacts are emitted to `dist/aegis-ops/`.
